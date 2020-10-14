@@ -2,14 +2,19 @@
 // Created by 郑卓铭 on 2020/9/2.
 //
 #include "WebServer.h"
+//#include "../Http/http_conn.h"
+
 
 
 namespace TinyWebServer{
 
-    WebServer::WebServer() {}
+    WebServer::WebServer(int thread_number, int max_request_number) {
+        this->mthreadPool = new ThreadPool(thread_number,max_request_number);
+    }
     WebServer::~WebServer() {}
     void WebServer::init(int port) {
         this->port = port;
+        //http_conn::m_user_count = 0;
     }
     void WebServer::eventListen() {
         //监听
@@ -41,9 +46,6 @@ namespace TinyWebServer{
         epollfd = epoll_create(5);
         assert(epollfd != -1);
         addfd(listenfd,false);//这里为什么false
-
-
-
     }
     void WebServer::eventLoop() {
         //单独写成一个事件循环
@@ -54,12 +56,11 @@ namespace TinyWebServer{
                 std::cout<<"error failure"<<std::endl;
                 break;
             }
-
             for(int i = 0;i < number;i++){
                 int sockfd = events[i].data.fd;
-
                 //处理信道的客户连接
                 if(sockfd == listenfd){
+                    cout<<"有接收到新的连接"<<endl;
                     struct sockaddr_in client_address;
                     socklen_t client_addrlength = sizeof(client_address);
                     while(1){
@@ -69,36 +70,17 @@ namespace TinyWebServer{
                             std::cout<<"errno is "<<errno<<std::endl;
                             break;
                         }
-                        addfd(connfd,true);//注册可读事件
+                        //分配给工作线程
+                        //addfd(connfd,true);//注册可读事件
+                        DiverseInfo message(connfd,client_address);
+                        mthreadPool->append(message);
                     }
-                }else if(events[i].events & EPOLLIN){
-                    //可读
-                    char read_buff[1024],write_buff[] = "Hello World!";
-                    while(1){
-                        //非阻塞状态得循环读
-                        int ret = recv(sockfd,read_buff,1024,0);
-                        if(ret < 0){
-                            if(errno == EAGAIN || errno == EWOULDBLOCK){
-                                //说明读取完毕
-                                break;
-                            }
-                        }
-                    };
-                    std::cout<<read_buff<<std::endl;
-                    send(sockfd,write_buff,sizeof(write_buff),0);
-                    close(sockfd);
+                }else{
+                    cout<<"other"<<endl;
                 }
-
             }
-
-
-
         }
     }
-
-
-
-
     //epoll
     int WebServer::setnonblocking(int fd) {
         int old_option = fcntl(fd,F_GETFL);

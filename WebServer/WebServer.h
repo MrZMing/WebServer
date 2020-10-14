@@ -17,27 +17,33 @@
 #include <sys/epoll.h>
 #include <iostream>
 #include <string.h>
+#include "../ThreadPool/ThreadPool.h"
 
+using std::cout;
+using std::endl;
 
 namespace TinyWebServer {
 
     //定义常量
-    const int MAX_FD = 65536;
-    const int MAX_EVENT_NUMBER = 10000;
+    //const int MAX_FD = 65536;
+    //const int MAX_EVENT_NUMBER = 10000;
+    //主线程和子线程传递的结构体
+
 
     class WebServer {
     private:
         std::string ip;
         int port;
         int listenfd;
-
         int epollfd;
         epoll_event events[MAX_EVENT_NUMBER];
 
+        //线程池对象
+        ThreadPool* mthreadPool;
 
 
     public:
-        WebServer();
+        WebServer(int thread_number,int max_request_number);
         ~WebServer();
         void init(int port);
         void eventListen();

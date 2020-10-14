@@ -16,19 +16,19 @@ namespace TinyWebServer{
         sem_t sem;
     public:
         //在构造函数中创建信号量，在析构函数中销毁
-        sem(){
-            if(sem_init(&sem_t,0,0) != 0){
+        Sem(){
+            if(sem_init(&sem,0,0) != 0){
                 //如果构建失败要抛出异常
                 throw std::exception();
             }
         }
-        sem(){
-            if(sem_init(&sem_t,0,num) != 0){
+        Sem(int num){
+            if(sem_init(&sem,0,num) != 0){
                 //如果构建失败要抛出异常
                 throw std::exception();
             }
         }
-        ~sem(){
+        ~Sem(){
             sem_destroy(&sem);
         }
         //信号量的PV操作,成功都是返回的0
@@ -45,12 +45,12 @@ namespace TinyWebServer{
     private:
         pthread_mutex_t mutex;
     public:
-        locker(){
+        Locker(){
             if(pthread_mutex_init(&mutex,NULL) != 0){
                 throw std::exception();
             }
         }
-        ~locker(){
+        ~Locker(){
             pthread_mutex_destroy(&mutex);
         }
         bool lock(){
@@ -70,15 +70,15 @@ namespace TinyWebServer{
         pthread_cond_t cond;
         pthread_mutex_t mutex;
     public:
-        cond(){
-            if(pthread_cond_init(&cond) != 0){
+        Cond(){
+            if(pthread_cond_init(&cond,0) != 0){
                 throw std::exception();
             }
-            if(pthread_mutex_init(&mutex) != 0){
+            if(pthread_mutex_init(&mutex,0) != 0){
                 throw std::exception();
             }
         }
-        ~cond(){
+        ~Cond(){
             pthread_mutex_destroy(&mutex);
             pthread_cond_destroy(&cond);
         }
