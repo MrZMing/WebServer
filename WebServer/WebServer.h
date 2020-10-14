@@ -43,7 +43,7 @@ namespace TinyWebServer {
 
 
     public:
-        WebServer(int thread_number,int max_request_number);
+        WebServer(int thread_number,int max_request_number,int timeout = 5);
         ~WebServer();
         void init(int port);
         void eventListen();

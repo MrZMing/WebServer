@@ -19,6 +19,7 @@
 #include "../Lock/Locker.h"
 #include "../Http/http_conn.h"
 #include "../Timer/TimerWheel.h"
+#include "../Utils/Utils.h"
 
 
 using std::cout;
@@ -52,12 +53,13 @@ namespace TinyWebServer {
         //注意一个雷pthread需要维护一个主线程和子线程之间沟通的eventfd，因此在构建线程的过程中同时需要构建好eventfd
         int *eventfds;                      //用一个数组同线程池一样同步维护,或者将二者构建成一个结构体也可以
         int index;                          //维护一个下标用来round robin选取工作线程
+        int timeout;                        //维护定时器超时时间
         //MessageQueue<T> meesage_queue;    //这个是主线程分发给IO线程的消息队列
         //因为线程回调函数必须是静态函数，所以设置线程的回调函数是静态函数
         //传递一个线程池对象，然后再其中去调用其成员函数即可
     public:
         //构造和析构
-        ThreadPool(int thread_number = 4,int max_request = 10000);
+        ThreadPool(int thread_number = 4,int max_request = 10000,int timeout = 5);
         ~ThreadPool();
         //添加socket到队列中
         bool append(DiverseInfo);
@@ -67,6 +69,8 @@ namespace TinyWebServer {
         void handleWakeup();
         void wakeup(int wakeupFd);
         void thread_cb_core(int);//真正调用的run函数
+
+
     };
 
     //工作线程调用需要的数据构建一个结构体

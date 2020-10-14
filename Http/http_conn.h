@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <iostream>
+#include "../Utils/Utils.h"
 
 using std::cout;
 using std::endl;
@@ -117,9 +118,10 @@ namespace TinyWebServer {
         int bytes_to_send;
         int bytes_have_send;
 
-        int m_TRIGMode;
+        int m_et_mode;
     public:
         http_conn() {};
+        http_conn(int epollfd,int sockfd, const sockaddr_in &addr, int);
 
         ~http_conn() {};
     public:
@@ -137,6 +139,8 @@ namespace TinyWebServer {
 
         //非阻塞写操作
         bool write();
+
+
 
     private:
         //初始化连接

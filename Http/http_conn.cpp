@@ -22,53 +22,61 @@ namespace TinyWebServer {
     const char *doc_root = "./root";
 
 //设置非阻塞
-    int setnonblocking(int fd) {
-        int old_option = fcntl(fd, F_GETFL);
-        int new_option = old_option | O_NONBLOCK;
-        fcntl(fd, F_SETFL, new_option);
-        return old_option;
-    }
-
-    void addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
-        epoll_event event;
-        event.data.fd = fd;
-        //EPOLLRDHUP表示如果对方关闭socket我们可以直接检测到这个属性
-        //不设置这个就需要自己read到0表示关闭了
-        if (1 == TRIGMode)
-            event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-        else
-            event.events = EPOLLIN | EPOLLRDHUP;
-        if (one_shot)
-            //发生一次事件通知后，就不再接收通知，需要重新设置
-            event.events |= EPOLLONESHOT;
-        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-        setnonblocking(fd);
-    }
-
-    void removefd(int epollfd, int fd) {
-        epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
-        close(fd);
-    }
-
-    void modfd(int epollfd, int fd, int ev) {
-        epoll_event event;
-        event.data.fd = fd;
-        event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-    }
+//    int setnonblocking(int fd) {
+//        int old_option = fcntl(fd, F_GETFL);
+//        int new_option = old_option | O_NONBLOCK;
+//        fcntl(fd, F_SETFL, new_option);
+//        return old_option;
+//    }
+//
+//    void addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
+//        epoll_event event;
+//        event.data.fd = fd;
+//        //EPOLLRDHUP表示如果对方关闭socket我们可以直接检测到这个属性
+//        //不设置这个就需要自己read到0表示关闭了
+//        if (1 == TRIGMode)
+//            event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+//        else
+//            event.events = EPOLLIN | EPOLLRDHUP;
+//        if (one_shot)
+//            //发生一次事件通知后，就不再接收通知，需要重新设置
+//            event.events |= EPOLLONESHOT;
+//        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+//        setnonblocking(fd);
+//    }
+//
+//    void removefd(int epollfd, int fd) {
+//        epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
+//        close(fd);
+//    }
+//
+//    void modfd(int epollfd, int fd, int ev) {
+//        epoll_event event;
+//        event.data.fd = fd;
+//        event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
+//        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+//    }
 
     int http_conn::m_user_count = 0;
     //int http_conn::m_epollfd = -1;
 
+
+    http_conn::http_conn(int epollfd,int sockfd, const sockaddr_in &addr, int TRIGMode){
+        init(epollfd,sockfd,addr,TRIGMode);
+    }
+
     void http_conn::close_conn(bool real_close) {
         if (real_close && (m_sockfd != -1)) {
-            removefd(m_epollfd, m_sockfd);
+            //关闭当前的连接
+
+            cout<<"关闭端口在"<<m_address.sin_port<<"的连接"<<endl;
+            Utils::removefd(m_epollfd, m_sockfd);
             m_sockfd = -1;
             m_user_count--;//关闭一个连接时，将客户总量减1
         }
     }
 
-    void http_conn::init(int epollfd,int sockfd, const sockaddr_in &addr, int TRIGMode) {
+    void http_conn::init(int epollfd,int sockfd, const sockaddr_in &addr, int et_mode) {
         m_epollfd = epollfd;
         m_sockfd = sockfd;
         m_address = addr;
@@ -76,9 +84,9 @@ namespace TinyWebServer {
         int reuse = 1;
         //设置避免timewait状态
         setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-        addfd(m_epollfd, sockfd, true, TRIGMode);
+        Utils::addfd(m_epollfd, sockfd, true, et_mode);
         m_user_count++;
-        m_TRIGMode = TRIGMode;
+        m_et_mode = et_mode;
         init();
     }
 
@@ -560,7 +568,7 @@ bool http_conn::write(){
         int temp = 0;
 
         if (bytes_to_send == 0) {
-            modfd(m_epollfd, m_sockfd, EPOLLIN);
+            Utils::modfd(m_epollfd, m_sockfd, EPOLLIN);
             init();
             return true;
         }
@@ -580,7 +588,7 @@ bool http_conn::write(){
 #ifdef DEBUG
                     printf("需要继续写\n");
 #endif
-                    modfd(m_epollfd, m_sockfd, EPOLLOUT);
+                    Utils::modfd(m_epollfd, m_sockfd, EPOLLOUT);
                     return true;
                 }
 #ifdef  DEBUG
@@ -607,7 +615,7 @@ bool http_conn::write(){
 
             if (bytes_to_send <= 0) {
                 unmap();
-                modfd(m_epollfd, m_sockfd, EPOLLIN);
+                Utils::modfd(m_epollfd, m_sockfd, EPOLLIN);
 
                 if (m_linger) {
 #ifdef DEBUG
@@ -837,7 +845,7 @@ bool http_conn::write(){
 #ifdef DEBUG
             printf("-->do the read_ret == NO_REQUEST");
 #endif
-            modfd(m_epollfd, m_sockfd, EPOLLIN);
+            Utils::modfd(m_epollfd, m_sockfd, EPOLLIN);
             return;
         }
         //其他时候根据读取结果返回信息
@@ -857,6 +865,6 @@ bool http_conn::write(){
 #endif
         }
         //如果写入成功了，我们就可注册写事件了
-        modfd(m_epollfd, m_sockfd, EPOLLOUT);
+        Utils::modfd(m_epollfd, m_sockfd, EPOLLOUT);
     }
 }

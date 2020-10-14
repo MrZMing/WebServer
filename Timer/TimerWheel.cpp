@@ -23,7 +23,8 @@ namespace TinyWebServer{
     }
     void TimerWheel::delete_timer(TimerInfo* timer){
         //删除某一个定时器
-        wheel[timer->timerSlot].erase(timer);
+        if(wheel[timer->timerSlot].count(timer))
+            wheel[timer->timerSlot].erase(timer);
     }
     void TimerWheel::delete_curSlot() {
         //当前所在的时间轮就是到期的时间轮，删除其中的所有定时器
@@ -35,6 +36,8 @@ namespace TinyWebServer{
         //cout<<"删除前"<<cur<<"有"<<wl.size()<<"个"<<endl;
         for(auto& iter : wl){
             //todo：执行函数回调，关闭对应的连接及删除epoll事件
+            //关闭对应的连接
+            iter->close_conn();
             wl.erase(iter);
         }
         //cout<<"删除后"<<cur<<"有"<<wl.size()<<"个"<<endl;

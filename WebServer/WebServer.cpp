@@ -8,8 +8,8 @@
 
 namespace TinyWebServer{
 
-    WebServer::WebServer(int thread_number, int max_request_number) {
-        this->mthreadPool = new ThreadPool(thread_number,max_request_number);
+    WebServer::WebServer(int thread_number, int max_request_number,int timeout) {
+        this->mthreadPool = new ThreadPool(thread_number,max_request_number,timeout);
     }
     WebServer::~WebServer() {}
     void WebServer::init(int port) {
