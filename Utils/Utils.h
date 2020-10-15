@@ -57,7 +57,7 @@ namespace TinyWebServer{
             //构建一个雷eventfd
             int evfd = eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
             if(evfd < 0){
-                cout<<"创建eventfd失败"<<endl;
+                //cout<<"创建eventfd失败"<<endl;
                 abort();
             }
             return evfd;

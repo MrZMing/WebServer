@@ -10,12 +10,21 @@ namespace TinyWebServer{
 
     WebServer::WebServer(int thread_number, int max_request_number,int timeout) {
         this->mthreadPool = new ThreadPool(thread_number,max_request_number,timeout);
+        //默认不开启日志功能，需要开启调用openlogFunc()函数来开启
+        Log::get_instance()->is_close = true;
     }
     WebServer::~WebServer() {}
+
     void WebServer::init(int port) {
         this->port = port;
-        //http_conn::m_user_count = 0;
     }
+
+    void openLogFunc(const char *file_name,int log_buf_size,int split_lines,int max_queue_size){
+        //开启日志功能函数
+        Log::get_instance()->is_close = false;
+        Log::get_instance()->init(file_name,log_buf_size,split_lines,max_queue_size);
+    }
+
     void WebServer::eventListen() {
         //监听
         listenfd = socket(PF_INET,SOCK_STREAM,0);
@@ -45,7 +54,9 @@ namespace TinyWebServer{
         //5只是给一个建议而已，操作系统会自己去生成对应大小的红黑树
         epollfd = epoll_create(5);
         assert(epollfd != -1);
-        addfd(listenfd,false);//这里为什么false
+        Utils::addfd(epollfd,listenfd,false,true);
+        Utils::setnonblocking(listenfd);                //ET模式一定要对文件描述符设置为非阻塞才行，否则会出错
+        //addfd(listenfd,false);//这里为什么false
     }
     void WebServer::eventLoop() {
         //单独写成一个事件循环
@@ -53,21 +64,23 @@ namespace TinyWebServer{
         while(!stop_server){
             int number = epoll_wait(epollfd,events,MAX_EVENT_NUMBER,-1);
             if(number < 0 && errno != EINTR){
-                std::cout<<"error failure"<<std::endl;
+                LOG_ERROR("mainLoop is error,epoll number < 0");
+                //std::cout<<"error failure"<<std::endl;
                 break;
             }
             for(int i = 0;i < number;i++){
                 int sockfd = events[i].data.fd;
                 //处理信道的客户连接
                 if(sockfd == listenfd){
-                    cout<<"有接收到新的连接"<<endl;
+                    //cout<<"有接收到新的连接"<<endl;
                     struct sockaddr_in client_address;
                     socklen_t client_addrlength = sizeof(client_address);
                     while(1){
                         int connfd = accept(listenfd,(struct sockaddr *)&client_address,&client_addrlength);
                         if(connfd < 0){
                             //出错
-                            std::cout<<"errno is "<<errno<<std::endl;
+                            LOG_ERROR("mainLoop is error,errno is %d",errno);
+                            //std::cout<<"errno is "<<errno<<std::endl;
                             break;
                         }
                         //分配给工作线程
@@ -76,31 +89,32 @@ namespace TinyWebServer{
                         mthreadPool->append(message);
                     }
                 }else{
-                    cout<<"other"<<endl;
+                    LOG_ERROR("mainLoop is error,errno is about other sockfd");
+                    //cout<<"other"<<endl;
                 }
             }
         }
     }
     //epoll
-    int WebServer::setnonblocking(int fd) {
-        int old_option = fcntl(fd,F_GETFL);
-        int new_option = old_option | O_NONBLOCK;
-        fcntl(fd,F_SETFL,new_option);
-        return old_option;
-    }
-
-    void WebServer::addfd(int fd, bool one_shot) {
-        epoll_event event;
-        event.data.fd = fd;
-
-        event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-
-        if(one_shot)
-            event.events |= EPOLLONESHOT;
-        epoll_ctl(epollfd,EPOLL_CTL_ADD,fd,&event);
-        setnonblocking(fd);//ET模式一定要对文件描述符设置为非阻塞才行，否则会出错
-
-    }
+//    int WebServer::setnonblocking(int fd) {
+//        int old_option = fcntl(fd,F_GETFL);
+//        int new_option = old_option | O_NONBLOCK;
+//        fcntl(fd,F_SETFL,new_option);
+//        return old_option;
+//    }
+//
+//    void WebServer::addfd(int fd, bool one_shot) {
+//        epoll_event event;
+//        event.data.fd = fd;
+//
+//        event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+//
+//        if(one_shot)
+//            event.events |= EPOLLONESHOT;
+//        epoll_ctl(epollfd,EPOLL_CTL_ADD,fd,&event);
+//        setnonblocking(fd);//ET模式一定要对文件描述符设置为非阻塞才行，否则会出错
+//
+//    }
 
 }
 

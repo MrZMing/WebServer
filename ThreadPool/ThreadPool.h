@@ -20,7 +20,7 @@
 #include "../Http/http_conn.h"
 #include "../Timer/TimerWheel.h"
 #include "../Utils/Utils.h"
-
+#include "../Log/Log.h"
 
 using std::cout;
 using std::endl;

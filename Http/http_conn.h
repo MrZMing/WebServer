@@ -18,6 +18,7 @@
 #include <cstdarg>
 #include <iostream>
 #include "../Utils/Utils.h"
+#include "../Log/Log.h"
 
 using std::cout;
 using std::endl;

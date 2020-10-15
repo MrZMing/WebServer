@@ -6,7 +6,7 @@
 //#include "../Log/log.h"
 
 
-#define  DEBUG
+//#define  DEBUG
 namespace TinyWebServer {
 /*定义HTTP响应的一些状态信息*/
     const char *ok_200_title = "OK";
@@ -68,8 +68,8 @@ namespace TinyWebServer {
     void http_conn::close_conn(bool real_close) {
         if (real_close && (m_sockfd != -1)) {
             //关闭当前的连接
-
-            cout<<"关闭端口在"<<m_address.sin_port<<"的连接"<<endl;
+            //cout<<"关闭端口在"<<m_address.sin_port<<"的连接"<<endl;
+            LOG_INFO("close the connect from port %d",m_address.sin_port);
             Utils::removefd(m_epollfd, m_sockfd);
             m_sockfd = -1;
             m_user_count--;//关闭一个连接时，将客户总量减1
@@ -167,8 +167,8 @@ namespace TinyWebServer {
         int bytes_read = 0;
         while (true) {
             bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
-            cout<<"打印出读取到的内容:";
-            cout<<m_read_buf<<endl;
+//            cout<<"打印出读取到的内容:";
+//            cout<<m_read_buf<<endl;
             //打印接收的请求报文，可以接收
             if (bytes_read == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -418,7 +418,7 @@ namespace TinyWebServer {
 
 //    //构建root/index.html
 //    strncpy(m_real_file + len,m_url,FILENAME_LEN-len-1);
-        cout<<m_real_file<<endl;
+        //cout<<m_real_file<<endl;
         if (stat(m_real_file, &m_file_stat) < 0) {
 
             cout<<"？？？？？？？？？？"<<endl;
